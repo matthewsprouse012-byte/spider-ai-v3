@@ -572,3 +572,37 @@ body {
     }
 
 }
+.tracking-box {
+    position: fixed;
+
+    z-index: 50;
+
+    pointer-events: none;
+
+    border: 2px solid white;
+
+    display: none;
+
+    box-sizing: border-box;
+}
+
+.tracking-label {
+    position: absolute;
+
+    left: -2px;
+    top: -25px;
+
+    padding: 4px 7px;
+
+    background: rgba(0, 0, 0, .82);
+
+    color: white;
+
+    font-size: 10px;
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    white-space: nowrap;
+}
