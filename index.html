@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+
+    <meta
+        name="theme-color"
+        content="#05070a"
+    >
+
+    <title>SPIDER-AI V3</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- CAMERA -->
+    <video
+        id="camera"
+        autoplay
+        playsinline
+        muted
+    ></video>
+
+
+    <!-- DARK HUD OVERLAY -->
+    <div id="hud">
+
+
+        <!-- TOP BAR -->
+        <header class="top-bar">
+
+            <div class="brand">
+                SPIDER-AI
+                <span>V3</span>
+            </div>
+
+            <div
+                id="systemStatus"
+                class="status online"
+            >
+                OFFLINE
+            </div>
+
+        </header>
+
+
+        <!-- TOP INFORMATION -->
+        <section class="top-info">
+
+            <div class="info-card">
+
+                <div class="label">
+                    BATTERY
+                </div>
+
+                <div
+                    id="battery"
+                    class="value"
+                >
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="label">
+                    FPS
+                </div>
+
+                <div
+                    id="fps"
+                    class="value"
+                >
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <div class="label">
+                    CAMERA
+                </div>
+
+                <div
+                    id="cameraStatus"
+                    class="value"
+                >
+                    OFF
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- CENTER RETICLE -->
+        <div
+            id="reticle"
+            class="reticle"
+        >
+
+            <div class="reticle-line top"></div>
+            <div class="reticle-line bottom"></div>
+            <div class="reticle-line left"></div>
+            <div class="reticle-line right"></div>
+
+            <div class="reticle-center"></div>
+
+        </div>
+
+
+        <!-- CENTER MESSAGE -->
+        <div
+            id="centerMessage"
+            class="center-message"
+        >
+            CAMERA OFFLINE
+        </div>
+
+
+        <!-- BOTTOM HUD -->
+        <section class="bottom-panel">
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    DISTANCE
+                </div>
+
+                <div
+                    id="distance"
+                    class="metric-value"
+                >
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    HEADING
+                </div>
+
+                <div
+                    id="heading"
+                    class="metric-value"
+                >
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    TRACKING
+                </div>
+
+                <div
+                    id="tracking"
+                    class="metric-value"
+                >
+                    OFF
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    MODE
+                </div>
+
+                <div
+                    id="mode"
+                    class="metric-value"
+                >
+                    BASIC
+                </div>
+
+            </div>
+
+
+            <!-- MAIN BUTTON -->
+
+            <button
+                id="startButton"
+                class="start-button"
+            >
+                START SPIDER-AI
+            </button>
+
+
+        </section>
+
+
+        <!-- BOTTOM STATUS -->
+
+        <div
+            id="statusMessage"
+            class="status-message"
+        >
+            SYSTEM READY
+        </div>
+
+    </div>
+
+
+    <script src="app.js"></script>
+
+</body>
+</html>
