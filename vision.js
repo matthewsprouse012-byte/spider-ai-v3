@@ -1,133 +1,87 @@
-console.log("SPIDER-AI V3 VISION LOADED");
-
+console.log("SPIDER-AI V3 TRACKING LOADED");
 
 window.Vision = {
 
     model: null,
-
     running: false,
-
     detecting: false,
-
     video: null,
 
-    box: null,
-
-
-    // ==========================================
-    // LOAD MODEL
-    // ==========================================
+    targets: [],
+    nextID: 1,
 
     async loadModel() {
 
-        console.log(
-            "VISION: loading object model..."
-        );
-
+        console.log("VISION: loading model...");
 
         if (!window.cocoSsd) {
-
-            console.error(
-                "VISION: COCO-SSD unavailable"
-            );
-
+            console.error("VISION: COCO-SSD NOT FOUND");
             return false;
-
         }
-
 
         try {
 
-            this.model =
-                await cocoSsd.load();
+            this.model = await cocoSsd.load();
 
-
-            console.log(
-                "VISION: MODEL READY"
-            );
-
+            console.log("VISION: MODEL READY");
 
             return true;
 
         } catch (error) {
 
             console.error(
-                "VISION: MODEL ERROR",
+                "VISION: MODEL LOAD FAILED",
                 error
             );
 
             return false;
-
         }
-
     },
 
-
-    // ==========================================
-    // START
-    // ==========================================
 
     async start(video) {
 
         this.video =
             video ||
-            document.getElementById(
-                "camera"
-            );
-
+            document.getElementById("camera");
 
         if (!this.video) {
 
             console.error(
-                "VISION: camera missing"
+                "VISION: CAMERA NOT FOUND"
             );
 
             return false;
-
         }
-
 
         if (!this.model) {
 
             const ready =
                 await this.loadModel();
 
-
             if (!ready) {
-
                 return false;
-
             }
-
         }
 
-
         this.running = true;
-
+        this.targets = [];
 
         console.log(
-            "VISION: SCANNING"
+            "VISION: TRACKING STARTED"
         );
-
 
         this.scan();
 
-
         return true;
-
     },
 
-
-    // ==========================================
-    // SCAN
-    // ==========================================
 
     async scan() {
 
         if (!this.running) {
             return;
         }
-
 
         if (
             !this.model ||
@@ -140,9 +94,7 @@ window.Vision = {
             );
 
             return;
-
         }
-
 
         if (this.detecting) {
 
@@ -151,12 +103,9 @@ window.Vision = {
             );
 
             return;
-
         }
 
-
         this.detecting = true;
-
 
         try {
 
@@ -164,27 +113,23 @@ window.Vision = {
                 await this.model.detect(
                     this.video,
                     20,
-                    0.35
+                    0.40
                 );
 
-
-            this.handlePredictions(
+            this.updateTracking(
                 predictions
             );
-
 
         } catch (error) {
 
             console.error(
-                "VISION: scan error",
+                "VISION: DETECTION ERROR",
                 error
             );
 
         }
 
-
         this.detecting = false;
-
 
         if (this.running) {
 
@@ -193,287 +138,404 @@ window.Vision = {
             );
 
         }
+    },
+
+
+    // ==========================================
+    // TRACK OBJECTS BETWEEN FRAMES
+    // ==========================================
+
+    updateTracking(predictions) {
+
+        const newTargets = [];
+
+        for (const prediction of predictions) {
+
+            const box =
+                prediction.bbox;
+
+            const center = {
+
+                x:
+                    box[0] +
+                    box[2] / 2,
+
+                y:
+                    box[1] +
+                    box[3] / 2
+
+            };
+
+
+            let closest = null;
+
+            let closestDistance =
+                Infinity;
+
+
+            for (const old of this.targets) {
+
+                if (
+                    old.name !==
+                    prediction.class
+                ) {
+                    continue;
+                }
+
+
+                const dx =
+                    center.x -
+                    old.center.x;
+
+
+                const dy =
+                    center.y -
+                    old.center.y;
+
+
+                const distance =
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    );
+
+
+                if (
+                    distance <
+                    closestDistance
+                ) {
+
+                    closestDistance =
+                        distance;
+
+                    closest =
+                        old;
+
+                }
+            }
+
+
+            let id;
+
+
+            if (
+                closest &&
+                closestDistance < 150
+            ) {
+
+                id =
+                    closest.id;
+
+            } else {
+
+                id =
+                    this.nextID++;
+
+            }
+
+
+            newTargets.push({
+
+                id: id,
+
+                name:
+                    prediction.class,
+
+                confidence:
+                    prediction.score,
+
+                bbox: box,
+
+                center: center,
+
+                lastSeen:
+                    Date.now()
+
+            });
+
+        }
+
+
+        this.targets =
+            newTargets;
+
+
+        this.displayTargets();
 
     },
 
 
     // ==========================================
-    // PROCESS OBJECTS
+    // DISPLAY TRACKED OBJECTS
     // ==========================================
 
-    handlePredictions(
-        predictions
-    ) {
+    displayTargets() {
+
+        this.removeOldBoxes();
+
 
         if (
-            !predictions ||
-            predictions.length === 0
+            this.targets.length === 0
         ) {
 
-            this.clearTarget();
+            this.setNoTarget();
 
             return;
+        }
+
+
+        const highest =
+            this.targets
+                .slice()
+                .sort(
+                    (a, b) =>
+                        b.confidence -
+                        a.confidence
+                )[0];
+
+
+        this.updateMainTarget(
+            highest
+        );
+
+
+        for (
+            const target
+            of this.targets
+        ) {
+
+            this.drawTarget(
+                target
+            );
 
         }
 
 
-        predictions.sort(
-            (a, b) =>
-                b.score - a.score
-        );
-
-
-        const target =
-            predictions[0];
-
-
-        const name =
-            target.class;
-
-
-        const confidence =
-            Math.round(
-                target.score * 100
-            );
-
-
-        console.log(
-            "TARGET:",
-            name,
-            confidence + "%"
-        );
-
-
-        // MAIN OBJECT NAME
-
-        const nameElement =
-            document.getElementById(
-                "objectName"
-            );
-
-
-        const confidenceElement =
-            document.getElementById(
-                "objectConfidence"
-            );
-
-
-        const trackingElement =
+        const tracking =
             document.getElementById(
                 "tracking"
             );
 
 
-        const statusElement =
+        if (tracking) {
+
+            tracking.textContent =
+                this.targets.length +
+                " LOCKED";
+
+        }
+
+
+        const status =
             document.getElementById(
                 "statusMessage"
             );
 
 
-        if (nameElement) {
+        if (status) {
 
-            nameElement.textContent =
-                name.toUpperCase();
-
-        }
-
-
-        if (confidenceElement) {
-
-            confidenceElement.textContent =
-                confidence +
-                "% CONFIDENCE";
+            status.textContent =
+                this.targets.length +
+                " OBJECT" +
+                (
+                    this.targets.length === 1
+                        ? ""
+                        : "S"
+                ) +
+                " TRACKED";
 
         }
-
-
-        if (trackingElement) {
-
-            trackingElement.textContent =
-                "LOCKED";
-
-        }
-
-
-        if (statusElement) {
-
-            statusElement.textContent =
-                "TARGET: " +
-                name.toUpperCase();
-
-        }
-
-
-        this.drawBox(
-            target
-        );
 
     },
 
 
     // ==========================================
-    // DRAW BOX
+    // MAIN TARGET
     // ==========================================
 
-    drawBox(
-        prediction
-    ) {
+    updateMainTarget(target) {
+
+        const name =
+            document.getElementById(
+                "objectName"
+            );
+
+
+        const confidence =
+            document.getElementById(
+                "objectConfidence"
+            );
+
+
+        if (name) {
+
+            name.textContent =
+                target.name.toUpperCase();
+
+        }
+
+
+        if (confidence) {
+
+            confidence.textContent =
+                Math.round(
+                    target.confidence * 100
+                ) +
+                "% CONFIDENCE";
+
+        }
+
+    },
+
+
+    // ==========================================
+    // DRAW TRACKING BOX
+    // ==========================================
+
+    drawTarget(target) {
 
         const video =
             this.video;
 
 
         if (
-            !video ||
             !video.videoWidth ||
             !video.videoHeight
         ) {
-
             return;
-
         }
 
 
-        if (!this.box) {
+        let element =
+            document.getElementById(
+                "target-" +
+                target.id
+            );
 
-            this.box =
+
+        if (!element) {
+
+            element =
                 document.createElement(
                     "div"
                 );
 
 
-            this.box.className =
-                "detection-box";
+            element.id =
+                "target-" +
+                target.id;
 
 
-            this.box.innerHTML =
-                `
-                <div class="detection-label">
-                </div>
-                `;
+            element.className =
+                "tracking-box";
+
+
+            element.innerHTML = `
+                <div class="tracking-label"></div>
+            `;
 
 
             document.body.appendChild(
-                this.box
+                element
             );
 
         }
 
 
-        const videoRatio =
-            video.videoWidth /
-            video.videoHeight;
+        const scale =
+            Math.max(
 
-
-        const screenRatio =
-            window.innerWidth /
-            window.innerHeight;
-
-
-        let scale;
-
-        let offsetX = 0;
-        let offsetY = 0;
-
-
-        if (
-            videoRatio >
-            screenRatio
-        ) {
-
-            scale =
-                window.innerHeight /
-                video.videoHeight;
-
-
-            const displayedWidth =
-                video.videoWidth *
-                scale;
-
-
-            offsetX =
-                (
-                    window.innerWidth -
-                    displayedWidth
-                ) / 2;
-
-        } else {
-
-            scale =
                 window.innerWidth /
-                video.videoWidth;
+                    video.videoWidth,
+
+                window.innerHeight /
+                    video.videoHeight
+
+            );
 
 
-            const displayedHeight =
-                video.videoHeight *
-                scale;
+        const displayWidth =
+            video.videoWidth *
+            scale;
 
 
-            offsetY =
-                (
-                    window.innerHeight -
-                    displayedHeight
-                ) / 2;
+        const displayHeight =
+            video.videoHeight *
+            scale;
 
-        }
+
+        const offsetX =
+            (
+                window.innerWidth -
+                displayWidth
+            ) / 2;
+
+
+        const offsetY =
+            (
+                window.innerHeight -
+                displayHeight
+            ) / 2;
 
 
         const x =
-            prediction.bbox[0] *
+            target.bbox[0] *
             scale +
             offsetX;
 
 
         const y =
-            prediction.bbox[1] *
+            target.bbox[1] *
             scale +
             offsetY;
 
 
         const width =
-            prediction.bbox[2] *
+            target.bbox[2] *
             scale;
 
 
         const height =
-            prediction.bbox[3] *
+            target.bbox[3] *
             scale;
 
 
-        this.box.style.left =
+        element.style.left =
             x + "px";
 
 
-        this.box.style.top =
+        element.style.top =
             y + "px";
 
 
-        this.box.style.width =
+        element.style.width =
             width + "px";
 
 
-        this.box.style.height =
+        element.style.height =
             height + "px";
 
 
-        this.box.style.display =
+        element.style.display =
             "block";
 
 
         const label =
-            this.box.querySelector(
-                ".detection-label"
+            element.querySelector(
+                ".tracking-label"
             );
 
 
         if (label) {
 
             label.textContent =
-                prediction.class
-                    .toUpperCase() +
+                "#" +
+                target.id +
+                " " +
+                target.name.toUpperCase() +
                 " " +
                 Math.round(
-                    prediction.score * 100
+                    target.confidence * 100
                 ) +
                 "%";
 
@@ -483,10 +545,53 @@ window.Vision = {
 
 
     // ==========================================
-    // CLEAR
+    // REMOVE OLD BOXES
     // ==========================================
 
-    clearTarget() {
+    removeOldBoxes() {
+
+        const boxes =
+            document.querySelectorAll(
+                ".tracking-box"
+            );
+
+
+        boxes.forEach(
+            box => {
+
+                const id =
+                    box.id.replace(
+                        "target-",
+                        ""
+                    );
+
+
+                const exists =
+                    this.targets.some(
+                        target =>
+                            String(
+                                target.id
+                            ) === id
+                    );
+
+
+                if (!exists) {
+
+                    box.remove();
+
+                }
+
+            }
+        );
+
+    },
+
+
+    // ==========================================
+    // NO TARGET
+    // ==========================================
+
+    setNoTarget() {
 
         const name =
             document.getElementById(
@@ -503,12 +608,6 @@ window.Vision = {
         const tracking =
             document.getElementById(
                 "tracking"
-            );
-
-
-        const status =
-            document.getElementById(
-                "statusMessage"
             );
 
 
@@ -530,17 +629,15 @@ window.Vision = {
         }
 
 
+        const status =
+            document.getElementById(
+                "statusMessage"
+            );
+
+
         if (status) {
             status.textContent =
                 "SCANNING";
-        }
-
-
-        if (this.box) {
-
-            this.box.style.display =
-                "none";
-
         }
 
     },
@@ -553,7 +650,7 @@ window.Vision = {
     stop() {
 
         console.log(
-            "VISION: STOPPED"
+            "VISION: TRACKING STOPPED"
         );
 
 
@@ -561,16 +658,20 @@ window.Vision = {
 
         this.detecting = false;
 
-
-        if (this.box) {
-
-            this.box.style.display =
-                "none";
-
-        }
+        this.targets = [];
 
 
-        this.clearTarget();
+        document
+            .querySelectorAll(
+                ".tracking-box"
+            )
+            .forEach(
+                box =>
+                    box.remove()
+            );
+
+
+        this.setNoTarget();
 
     }
 
