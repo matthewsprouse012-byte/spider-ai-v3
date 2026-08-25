@@ -1,19 +1,17 @@
 console.log("SPIDER-AI V3 APP LOADED");
 
 
-const App = {
+window.App = {
 
     running: false,
 
     stream: null,
 
+    fpsFrames: 0,
+
+    fpsLastTime: 0,
+
     animationFrame: null,
-
-    lastFrameTime: 0,
-
-    frameCount: 0,
-
-    fpsTime: 0,
 
 
     // ==========================================
@@ -23,7 +21,7 @@ const App = {
     initialize() {
 
         console.log(
-            "V3: initializing"
+            "V3: INITIALIZING"
         );
 
 
@@ -36,7 +34,7 @@ const App = {
         if (!button) {
 
             console.error(
-                "V3: start button missing"
+                "V3: START BUTTON NOT FOUND"
             );
 
             return;
@@ -49,7 +47,7 @@ const App = {
             () => {
 
                 console.log(
-                    "V3: button pressed"
+                    "V3: START BUTTON PRESSED"
                 );
 
 
@@ -69,7 +67,7 @@ const App = {
 
         this.updateBattery();
 
-        this.updateHeading();
+        this.setupOrientation();
 
         this.setStatus(
             "SYSTEM READY"
@@ -77,7 +75,7 @@ const App = {
 
 
         console.log(
-            "V3: ready"
+            "V3: READY"
         );
 
     },
@@ -89,14 +87,15 @@ const App = {
 
     async start() {
 
-        console.log(
-            "V3: starting"
-        );
-
-
         const button =
             document.getElementById(
                 "startButton"
+            );
+
+
+        const camera =
+            document.getElementById(
+                "camera"
             );
 
 
@@ -109,25 +108,11 @@ const App = {
 
 
             this.setStatus(
-                "REQUESTING CAMERA"
+                "STARTING CAMERA"
             );
 
 
-            // --------------------------------------
             // CAMERA
-            // --------------------------------------
-
-            if (
-                !navigator.mediaDevices ||
-                !navigator.mediaDevices.getUserMedia
-            ) {
-
-                throw new Error(
-                    "Camera API unavailable"
-                );
-
-            }
-
 
             this.stream =
                 await navigator.mediaDevices
@@ -154,21 +139,15 @@ const App = {
                     });
 
 
-            const video =
-                document.getElementById(
-                    "camera"
-                );
-
-
-            video.srcObject =
+            camera.srcObject =
                 this.stream;
 
 
-            await video.play();
+            await camera.play();
 
 
             console.log(
-                "V3: camera online"
+                "V3: CAMERA ONLINE"
             );
 
 
@@ -184,16 +163,49 @@ const App = {
                 "ONLINE";
 
 
-            document.getElementById(
-                "tracking"
-            ).textContent =
-                "READY";
-
-
             this.setStatus(
-                "CAMERA ONLINE"
+                "LOADING OBJECT DETECTION"
             );
 
+
+            // AI MODEL
+
+            if (!window.Vision) {
+
+                throw new Error(
+                    "vision.js failed to load"
+                );
+
+            }
+
+
+            const started =
+                await Vision.start(
+                    camera
+                );
+
+
+            if (!started) {
+
+                throw new Error(
+                    "Object detection failed to start"
+                );
+
+            }
+
+
+            // ACTIVE
+
+            this.running = true;
+
+
+            document.getElementById(
+                "mode"
+            ).textContent =
+                "OBJECT SCAN";
+
+
+            button.disabled = false;
 
             button.textContent =
                 "STOP SPIDER-AI";
@@ -204,12 +216,17 @@ const App = {
             );
 
 
-            this.running = true;
+            this.setStatus(
+                "SCANNING OBJECTS"
+            );
 
-            button.disabled = false;
+
+            this.startFPS();
 
 
-            this.startPerformanceLoop();
+            console.log(
+                "SPIDER-AI V3 ACTIVE"
+            );
 
 
         } catch (error) {
@@ -237,6 +254,10 @@ const App = {
             }
 
 
+            camera.srcObject =
+                null;
+
+
             button.disabled = false;
 
             button.textContent =
@@ -244,7 +265,7 @@ const App = {
 
 
             this.setStatus(
-                "CAMERA FAILED"
+                "START FAILED"
             );
 
         }
@@ -259,20 +280,16 @@ const App = {
     stop() {
 
         console.log(
-            "V3: stopping"
+            "V3: STOPPING"
         );
 
 
         this.running = false;
 
 
-        if (this.animationFrame) {
+        if (window.Vision) {
 
-            cancelAnimationFrame(
-                this.animationFrame
-            );
-
-            this.animationFrame = null;
+            Vision.stop();
 
         }
 
@@ -291,13 +308,14 @@ const App = {
         }
 
 
-        const video =
+        const camera =
             document.getElementById(
                 "camera"
             );
 
 
-        video.srcObject = null;
+        camera.srcObject =
+            null;
 
 
         document.getElementById(
@@ -316,6 +334,12 @@ const App = {
             "tracking"
         ).textContent =
             "OFF";
+
+
+        document.getElementById(
+            "mode"
+        ).textContent =
+            "BASIC";
 
 
         const button =
@@ -339,7 +363,6 @@ const App = {
             "SYSTEM READY"
         );
 
-
     },
 
 
@@ -347,11 +370,11 @@ const App = {
     // FPS
     // ==========================================
 
-    startPerformanceLoop() {
+    startFPS() {
 
-        this.frameCount = 0;
+        this.fpsFrames = 0;
 
-        this.fpsTime =
+        this.fpsLastTime =
             performance.now();
 
 
@@ -363,22 +386,20 @@ const App = {
                 }
 
 
-                this.frameCount++;
+                this.fpsFrames++;
 
 
                 const elapsed =
                     time -
-                    this.fpsTime;
+                    this.fpsLastTime;
 
 
                 if (elapsed >= 1000) {
 
                     const fps =
                         Math.round(
-                            (
-                                this.frameCount *
-                                1000
-                            ) /
+                            this.fpsFrames *
+                            1000 /
                             elapsed
                         );
 
@@ -389,9 +410,9 @@ const App = {
                         fps;
 
 
-                    this.frameCount = 0;
+                    this.fpsFrames = 0;
 
-                    this.fpsTime =
+                    this.fpsLastTime =
                         time;
 
                 }
@@ -449,7 +470,8 @@ const App = {
                     element.textContent =
                         Math.round(
                             battery.level * 100
-                        ) + "%";
+                        ) +
+                        "%";
 
                 };
 
@@ -474,23 +496,14 @@ const App = {
 
 
     // ==========================================
-    // HEADING
+    // ORIENTATION
     // ==========================================
 
-    updateHeading() {
-
-        const element =
-            document.getElementById(
-                "heading"
-            );
-
+    setupOrientation() {
 
         if (
             !window.DeviceOrientationEvent
         ) {
-
-            element.textContent =
-                "--";
 
             return;
 
@@ -499,33 +512,25 @@ const App = {
 
         window.addEventListener(
             "deviceorientation",
-            (event) => {
-
-                let heading =
-                    event.alpha;
-
+            event => {
 
                 if (
-                    heading === null ||
-                    heading === undefined
+                    event.alpha === null ||
+                    event.alpha === undefined
                 ) {
-
-                    element.textContent =
-                        "--";
 
                     return;
 
                 }
 
 
-                heading =
+                document.getElementById(
+                    "heading"
+                ).textContent =
                     Math.round(
-                        heading
-                    );
-
-
-                element.textContent =
-                    heading + "°";
+                        event.alpha
+                    ) +
+                    "°";
 
             }
         );
@@ -539,29 +544,15 @@ const App = {
 
     setStatus(message) {
 
-        const element =
+        const status =
             document.getElementById(
                 "statusMessage"
             );
 
 
-        if (element) {
+        if (status) {
 
-            element.textContent =
-                message;
-
-        }
-
-
-        const center =
-            document.getElementById(
-                "centerMessage"
-            );
-
-
-        if (center) {
-
-            center.textContent =
+            status.textContent =
                 message;
 
         }
@@ -572,7 +563,7 @@ const App = {
 
 
 // ==========================================
-// START APP
+// PAGE READY
 // ==========================================
 
 window.addEventListener(
