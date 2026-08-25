@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
 
     <meta
@@ -16,6 +18,7 @@
     <title>SPIDER-AI V3</title>
 
     <link rel="stylesheet" href="style.css">
+
 </head>
 
 <body>
@@ -29,12 +32,11 @@
     ></video>
 
 
-    <!-- DARK HUD OVERLAY -->
+    <!-- HUD -->
     <div id="hud">
 
-
-        <!-- TOP BAR -->
-        <header class="top-bar">
+        <!-- TOP -->
+        <div class="top-bar">
 
             <div class="brand">
                 SPIDER-AI
@@ -43,16 +45,16 @@
 
             <div
                 id="systemStatus"
-                class="status online"
+                class="status"
             >
                 OFFLINE
             </div>
 
-        </header>
+        </div>
 
 
-        <!-- TOP INFORMATION -->
-        <section class="top-info">
+        <!-- INFO -->
+        <div class="top-info">
 
             <div class="info-card">
 
@@ -101,14 +103,11 @@
 
             </div>
 
-        </section>
+        </div>
 
 
-        <!-- CENTER RETICLE -->
-        <div
-            id="reticle"
-            class="reticle"
-        >
+        <!-- RETICLE -->
+        <div id="reticle">
 
             <div class="reticle-line top"></div>
             <div class="reticle-line bottom"></div>
@@ -120,18 +119,32 @@
         </div>
 
 
-        <!-- CENTER MESSAGE -->
+        <!-- CURRENT OBJECT -->
         <div
-            id="centerMessage"
-            class="center-message"
+            id="objectDisplay"
+            class="object-display"
         >
-            CAMERA OFFLINE
+
+            <div
+                id="objectName"
+                class="object-name"
+            >
+                NO TARGET
+            </div>
+
+            <div
+                id="objectConfidence"
+                class="object-confidence"
+            >
+                --
+
+            </div>
+
         </div>
 
 
-        <!-- BOTTOM HUD -->
-        <section class="bottom-panel">
-
+        <!-- BOTTOM -->
+        <div class="bottom-panel">
 
             <div class="metric">
 
@@ -168,7 +181,7 @@
             <div class="metric">
 
                 <div class="metric-label">
-                    TRACKING
+                    OBJECT
                 </div>
 
                 <div
@@ -197,8 +210,6 @@
             </div>
 
 
-            <!-- MAIN BUTTON -->
-
             <button
                 id="startButton"
                 class="start-button"
@@ -206,11 +217,8 @@
                 START SPIDER-AI
             </button>
 
+        </div>
 
-        </section>
-
-
-        <!-- BOTTOM STATUS -->
 
         <div
             id="statusMessage"
@@ -222,7 +230,17 @@
     </div>
 
 
+    <!-- AI LIBRARIES -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+
+    <!-- SPIDER-AI -->
+    <script src="vision.js"></script>
+
     <script src="app.js"></script>
 
 </body>
+
 </html>
